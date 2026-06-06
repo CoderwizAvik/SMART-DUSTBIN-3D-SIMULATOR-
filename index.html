@@ -1,0 +1,1514 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EcoSegregate - Smart 3D AI Dustbin System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- OrbitControls -->
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <!-- GSAP for smooth animations -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/Draggable.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: radial-gradient(circle at center, #0d1527 0%, #050814 100%);
+            overflow-x: hidden;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.3);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(59, 130, 246, 0.5);
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: rgba(59, 130, 246, 0.8);
+        }
+        /* Cyberpunk scanlines and glows */
+        .cyber-grid {
+            background-image: linear-gradient(rgba(18, 24, 48, 0.5) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(18, 24, 48, 0.5) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+        .glow-blue {
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.3);
+            text-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+        }
+        .glow-green {
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.3);
+            text-shadow: 0 0 10px rgba(16, 185, 129, 0.5);
+        }
+        .glow-yellow {
+            box-shadow: 0 0 20px rgba(245, 158, 11, 0.3);
+            text-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+        }
+        /* Drag-hover styling */
+        .drag-hover {
+            border-color: #22d3ee !important;
+            background: rgba(34, 211, 238, 0.08) !important;
+            box-shadow: inset 0 0 25px rgba(34, 211, 238, 0.15);
+        }
+        /* Glowing ring animation */
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.1); opacity: 0.4; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+        .pulse-ring-element {
+            animation: pulse-ring 3s infinite ease-in-out;
+        }
+        /* Scanner line */
+        @keyframes scan {
+            0% { top: 0%; opacity: 1; }
+            50% { top: 100%; opacity: 1; }
+            100% { top: 0%; opacity: 1; }
+        }
+        .scanner-line {
+            animation: scan 2s infinite linear;
+        }
+        /* Custom card blur */
+        .glassmorphism {
+            background: rgba(10, 18, 36, 0.65);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+        .glassmorphism-header {
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+        }
+    </style>
+</head>
+<body class="text-slate-100 min-h-screen relative selection:bg-blue-600 selection:text-white cyber-grid">
+
+    <!-- Ambient background lights -->
+    <div class="absolute top-0 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+    <div class="absolute bottom-0 right-1/4 w-96 h-96 bg-emerald-600/10 rounded-full blur-[120px] pointer-events-none"></div>
+
+    <!-- MAIN WRAPPER -->
+    <div class="flex flex-col min-h-screen">
+        
+        <!-- HEADER -->
+        <header class="glassmorphism-header sticky top-0 z-50 px-4 py-3 lg:px-8 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-blue-600 to-cyan-400 p-2.5 rounded-xl shadow-lg shadow-blue-500/20">
+                    <i class="fa-solid fa-dumpster-fire text-white text-lg lg:text-xl"></i>
+                </div>
+                <div>
+                    <h1 class="font-orbitron text-md lg:text-xl font-bold tracking-wider bg-clip-text text-transparent bg-gradient-to-r from-white via-slate-200 to-slate-400">ECO-SEGREGATE 3D</h1>
+                    <p class="text-[10px] lg:text-xs text-blue-400 font-orbitron tracking-widest uppercase">Smart Waste Sorting AI Prototype</p>
+                </div>
+            </div>
+
+            <!-- Header Badges -->
+            <div class="flex items-center space-x-4">
+                <span class="hidden md:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
+                    System: Online
+                </span>
+                <span class="hidden md:inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold bg-blue-500/10 text-blue-400 border border-blue-500/20">
+                    <i class="fa-solid fa-microchip mr-1.5 text-xs"></i>
+                    AI Engine: V2.5-Edge
+                </span>
+                <button onclick="toggleSound()" id="soundBtn" class="flex items-center justify-center p-2.5 bg-slate-800/60 hover:bg-slate-700/80 text-blue-400 rounded-lg border border-slate-700 transition duration-200" title="Toggle Audio Synth">
+                    <i id="soundIcon" class="fa-solid fa-volume-high"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- MAIN LAYOUT -->
+        <main class="flex-grow grid grid-cols-1 lg:grid-cols-12 gap-6 p-4 lg:p-6 max-w-7xl mx-auto w-full">
+            
+            <!-- LEFT PANEL: Dashboard & Controls -->
+            <div class="lg:col-span-4 flex flex-col gap-5 order-2 lg:order-1">
+                
+                <!-- SYSTEM STATS DASHBOARD -->
+                <div class="glassmorphism p-5 rounded-2xl relative overflow-hidden group hover:border-slate-700/80 transition-all duration-300">
+                    <div class="absolute -top-12 -right-12 w-28 h-28 bg-blue-500/5 rounded-full blur-2xl"></div>
+                    <h3 class="font-orbitron text-xs font-bold uppercase tracking-wider text-slate-400 mb-4 flex items-center justify-between">
+                        <span><i class="fa-solid fa-chart-simple text-blue-400 mr-2"></i>Segregation Analytics</span>
+                        <span class="text-[10px] text-blue-500/80 bg-blue-500/10 px-2 py-0.5 rounded">Live Counter</span>
+                    </h3>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <!-- Wet Waste Count Card -->
+                        <div class="bg-emerald-500/5 border border-emerald-500/15 rounded-xl p-4 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-8 h-8 bg-emerald-500/10 rounded-bl-xl flex items-center justify-center">
+                                <i class="fa-solid fa-leaf text-[10px] text-emerald-400"></i>
+                            </div>
+                            <span class="text-[10px] uppercase font-semibold text-emerald-400/80 tracking-wider">Wet Segregated</span>
+                            <span id="wetCount" class="font-orbitron text-3xl font-extrabold mt-1.5 text-emerald-400 glow-green">0</span>
+                            <span class="text-[9px] text-slate-500 mt-1">Biodegradable / Food</span>
+                        </div>
+
+                        <!-- Dry Waste Count Card -->
+                        <div class="bg-amber-500/5 border border-amber-500/15 rounded-xl p-4 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                            <div class="absolute top-0 right-0 w-8 h-8 bg-amber-500/10 rounded-bl-xl flex items-center justify-center">
+                                <i class="fa-solid fa-recycle text-[10px] text-amber-400"></i>
+                            </div>
+                            <span class="text-[10px] uppercase font-semibold text-amber-400/80 tracking-wider">Dry Segregated</span>
+                            <span id="dryCount" class="font-orbitron text-3xl font-extrabold mt-1.5 text-amber-400 glow-yellow">0</span>
+                            <span class="text-[9px] text-slate-500 mt-1">Recyclable / Plastic</span>
+                        </div>
+                    </div>
+
+                    <!-- Progress bar of capacity -->
+                    <div class="mt-4">
+                        <div class="flex justify-between items-center text-[10px] mb-1.5">
+                            <span class="text-slate-400 uppercase tracking-widest font-semibold">Total Bin Capacity Fill Rate</span>
+                            <span id="fillPercent" class="font-orbitron text-blue-400 font-bold">0%</span>
+                        </div>
+                        <div class="w-full h-2.5 bg-slate-800/80 rounded-full overflow-hidden p-0.5 border border-slate-700/50">
+                            <div id="fillBar" class="h-full bg-gradient-to-r from-blue-500 to-cyan-400 rounded-full transition-all duration-500" style="width: 0%"></div>
+                        </div>
+                    </div>
+
+                    <!-- Reset & Reset Logs Buttons -->
+                    <div class="grid grid-cols-2 gap-2 mt-4">
+                        <button onclick="resetSimulation()" class="py-2 px-3 bg-slate-800/80 hover:bg-slate-700/80 text-xs font-semibold rounded-lg border border-slate-700 transition duration-200 flex items-center justify-center gap-1.5 text-slate-300">
+                            <i class="fa-solid fa-rotate"></i> Reset Counters
+                        </button>
+                        <button onclick="testSystemDiagnostics()" class="py-2 px-3 bg-blue-500/10 hover:bg-blue-500/20 text-xs font-semibold rounded-lg border border-blue-500/25 transition duration-200 flex items-center justify-center gap-1.5 text-blue-400">
+                            <i class="fa-solid fa-stethoscope"></i> Self Test
+                        </button>
+                    </div>
+                </div>
+
+                <!-- CONTROLLER - INTERACTIVE ITEMS FOR DROPPING -->
+                <div class="glassmorphism p-5 rounded-2xl flex-grow flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-orbitron text-xs font-bold uppercase tracking-wider text-slate-400 mb-1 flex items-center">
+                            <i class="fa-solid fa-hand-pointer text-cyan-400 mr-2 animate-bounce"></i> Interactive Drag Shelf
+                        </h3>
+                        <p class="text-[11px] text-slate-400 mb-4">Drag any item and drop it onto the 3D viewport scanner, or simply click/tap an item to auto-drop it.</p>
+
+                        <!-- Items Grid with visual draggable components -->
+                        <div class="grid grid-cols-2 gap-3 mb-5">
+                            <!-- WET OBJECTS PANEL -->
+                            <div class="space-y-2">
+                                <span class="text-[9px] uppercase tracking-wider text-emerald-400 font-bold block border-b border-emerald-500/20 pb-1">Wet Waste Tray</span>
+                                
+                                <!-- Apple Core -->
+                                <div id="drag-apple" draggable="true" ondragstart="onDragStart(event, 'wet', 'apple')" class="group border border-emerald-500/10 hover:border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('wet', 'apple')">
+                                    <div class="w-9 h-9 bg-emerald-500/15 rounded-lg flex items-center justify-center text-emerald-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-apple-whole"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Apple Core</span>
+                                        <span class="text-[9px] text-emerald-400/80 font-mono">Organic</span>
+                                    </div>
+                                </div>
+
+                                <!-- Onion -->
+                                <div id="drag-onion" draggable="true" ondragstart="onDragStart(event, 'wet', 'onion')" class="group border border-emerald-500/10 hover:border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('wet', 'onion')">
+                                    <div class="w-9 h-9 bg-emerald-500/15 rounded-lg flex items-center justify-center text-emerald-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-seedling"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Fresh Onion</span>
+                                        <span class="text-[9px] text-emerald-400/80 font-mono">Organic</span>
+                                    </div>
+                                </div>
+
+                                <!-- Banana Peel -->
+                                <div id="drag-banana" draggable="true" ondragstart="onDragStart(event, 'wet', 'banana')" class="group border border-emerald-500/10 hover:border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('wet', 'banana')">
+                                    <div class="w-9 h-9 bg-emerald-500/15 rounded-lg flex items-center justify-center text-emerald-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-lemon"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Banana Peel</span>
+                                        <span class="text-[9px] text-emerald-400/80 font-mono">Organic</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- DRY OBJECTS PANEL -->
+                            <div class="space-y-2">
+                                <span class="text-[9px] uppercase tracking-wider text-amber-400 font-bold block border-b border-amber-500/20 pb-1">Dry Waste Tray</span>
+                                
+                                <!-- Plastic Bottle -->
+                                <div id="drag-bottle" draggable="true" ondragstart="onDragStart(event, 'dry', 'bottle')" class="group border border-amber-500/10 hover:border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('dry', 'bottle')">
+                                    <div class="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center text-amber-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-bottle-water"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Plastic Bottle</span>
+                                        <span class="text-[9px] text-amber-400/80 font-mono">Recycle</span>
+                                    </div>
+                                </div>
+
+                                <!-- Soda Can -->
+                                <div id="drag-can" draggable="true" ondragstart="onDragStart(event, 'dry', 'can')" class="group border border-amber-500/10 hover:border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('dry', 'can')">
+                                    <div class="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center text-amber-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-wine-glass-empty"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Soda Can</span>
+                                        <span class="text-[9px] text-amber-400/80 font-mono">Aluminum</span>
+                                    </div>
+                                </div>
+
+                                <!-- Box -->
+                                <div id="drag-box" draggable="true" ondragstart="onDragStart(event, 'dry', 'box')" class="group border border-amber-500/10 hover:border-amber-500/40 bg-amber-500/5 hover:bg-amber-500/10 rounded-xl p-2.5 transition-all duration-200 cursor-grab active:cursor-grabbing flex items-center space-x-2.5 select-none" onclick="segregateWaste('dry', 'box')">
+                                    <div class="w-9 h-9 bg-amber-500/15 rounded-lg flex items-center justify-center text-amber-400 text-sm transition-transform group-hover:scale-110">
+                                        <i class="fa-solid fa-box"></i>
+                                    </div>
+                                    <div>
+                                        <span class="text-xs font-bold text-slate-200 block leading-tight">Cardboard Box</span>
+                                        <span class="text-[9px] text-amber-400/80 font-mono">Paper</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Voice Control Feature Box -->
+                        <div class="bg-blue-500/5 border border-blue-500/15 rounded-xl p-3 relative overflow-hidden">
+                            <div class="flex items-start space-x-3">
+                                <div class="p-2 bg-blue-500/10 text-blue-400 rounded-lg relative">
+                                    <i id="micIcon" class="fa-solid fa-microphone text-sm"></i>
+                                    <span id="micPulse" class="absolute inset-0 bg-blue-500/30 rounded-lg animate-ping hidden"></span>
+                                </div>
+                                <div>
+                                    <h4 class="text-xs font-bold text-slate-200 flex items-center gap-1.5">
+                                        Voice Control System
+                                        <span id="micStatus" class="text-[9px] text-slate-500 uppercase tracking-wider font-semibold font-orbitron">Off</span>
+                                    </h4>
+                                    <p class="text-[10px] text-slate-400 mt-0.5">Click to toggle. Say "<span class="text-emerald-400 font-semibold">Wet</span>" or "<span class="text-amber-400 font-semibold">Dry</span>" directly to activate segregation.</p>
+                                </div>
+                            </div>
+                            <button id="voiceBtn" onclick="toggleVoiceControl()" class="mt-2.5 w-full py-1.5 bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-xs font-bold rounded-lg transition text-white">
+                                Initialize Voice Listening
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- AI Confidence Simulator / Real-time Terminal Log -->
+                    <div class="mt-4 border-t border-slate-800/80 pt-3">
+                        <span class="text-[9px] uppercase tracking-widest font-semibold text-slate-500 block mb-1.5">Sensor telemetry pipeline</span>
+                        <div class="bg-black/40 border border-slate-800 rounded-lg p-2.5 h-24 overflow-y-auto text-[10px] font-mono text-cyan-400 flex flex-col gap-1" id="systemTerminal">
+                            <div>&gt;_ System ready for scanning.</div>
+                            <div>&gt;_ Waiting for waste input object detection...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MIDDLE PANEL: The Immersive 3D Render Canvas -->
+            <div class="lg:col-span-5 flex flex-col gap-4 order-1 lg:order-2">
+                <!-- 3D simulation block -->
+                <div class="glassmorphism rounded-2xl relative flex-grow min-h-[420px] flex flex-col overflow-hidden">
+                    
+                    <!-- Top Status Overlay (AI Camera HUD) -->
+                    <div class="absolute top-3 left-3 right-3 z-20 flex justify-between items-start pointer-events-none">
+                        <!-- AI Detection Overlay Frame -->
+                        <div class="bg-slate-950/80 border border-slate-700/80 p-2.5 rounded-xl backdrop-blur-md flex items-center space-x-3">
+                            <div class="w-8 h-8 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center relative overflow-hidden">
+                                <span class="absolute inset-0 bg-gradient-to-b from-blue-500/20 to-transparent flex items-center justify-center">
+                                    <i class="fa-solid fa-camera text-[10px] text-slate-400"></i>
+                                </span>
+                                <!-- Small video representation -->
+                                <div class="w-full h-full bg-emerald-500/10 border border-emerald-500/40 relative" id="camIndicator">
+                                    <div class="scanner-line absolute left-0 right-0 h-0.5 bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,1)]"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span>
+                                    <span class="text-[9px] font-mono font-semibold uppercase tracking-wider text-slate-300">SEGREGATOR-CAM [LIVE]</span>
+                                </div>
+                                <div id="hudClassification" class="text-[11px] font-orbitron font-bold text-cyan-400 mt-0.5">READY FOR INPUT</div>
+                            </div>
+                        </div>
+
+                        <!-- 3D Camera Controls Badge -->
+                        <div class="bg-slate-950/60 border border-slate-800/80 px-2.5 py-1.5 rounded-lg text-[9px] font-mono text-slate-400 backdrop-blur-sm flex items-center space-x-1.5">
+                            <i class="fa-solid fa-rotate-3d animate-spin-slow"></i>
+                            <span>Drag item over box to scan</span>
+                        </div>
+                    </div>
+
+                    <!-- 3D Scene Target Div -->
+                    <div id="canvas3d" class="w-full flex-grow relative bg-slate-950/10 cursor-grab active:cursor-grabbing transition-colors duration-300">
+                        <!-- Centered Loading Spinner -->
+                        <div id="canvasSpinner" class="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 z-10 transition-opacity duration-500">
+                            <div class="w-10 h-10 border-4 border-blue-500/20 border-t-blue-500 rounded-full animate-spin"></div>
+                            <span class="text-xs font-orbitron text-blue-400 mt-4 tracking-widest uppercase">Initializing 3D Space...</span>
+                        </div>
+
+                        <!-- Visual Drop Target Marker Overlay -->
+                        <div id="dropTargetMarker" class="absolute inset-4 border-2 border-dashed border-cyan-400/0 rounded-2xl pointer-events-none transition-all duration-300 flex flex-col items-center justify-center bg-cyan-500/0 z-10">
+                            <div class="scale-90 opacity-0 transition-all duration-300 transform translate-y-4 flex flex-col items-center" id="dropTargetText">
+                                <i class="fa-solid fa-arrows-down-to-line text-cyan-400 text-3xl mb-2 animate-bounce"></i>
+                                <span class="font-orbitron text-xs font-bold text-cyan-400 tracking-widest bg-slate-950/95 border border-cyan-500/40 px-3.5 py-1.5 rounded-xl shadow-lg shadow-cyan-500/10">DROP HERE TO SCAN WASTE</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Scanning laser frame overlay (visually binds the canvas) -->
+                    <div id="laserScanContainer" class="absolute inset-x-0 top-1/4 h-1/2 border-y border-cyan-500/10 pointer-events-none transition-all duration-300 opacity-0 bg-gradient-to-b from-transparent via-cyan-500/5 to-transparent">
+                        <div class="scanner-line absolute left-0 right-0 h-0.5 bg-cyan-400 shadow-[0_0_12px_rgba(34,211,238,1)]"></div>
+                    </div>
+
+                    <!-- Bottom HUD Stats for the Smart Lid state -->
+                    <div class="absolute bottom-3 left-3 right-3 z-20 pointer-events-none flex justify-between items-center gap-2">
+                        <!-- Left lid state -->
+                        <div id="wetLidStatus" class="glassmorphism px-3 py-2 rounded-xl text-center border-emerald-500/10 flex-grow max-w-[150px] transition-all duration-300">
+                            <span class="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Wet Compartment</span>
+                            <span class="text-[11px] font-orbitron font-semibold text-emerald-400" id="wetLidText">LID CLOSED</span>
+                        </div>
+                        
+                        <!-- Middle Reset / Help Action -->
+                        <div class="pointer-events-auto">
+                            <button onclick="reCenterCamera()" class="p-2.5 bg-slate-900/90 text-slate-300 hover:text-white border border-slate-800 rounded-xl hover:bg-slate-800 transition duration-200 text-xs shadow-lg" title="Re-center Camera view">
+                                <i class="fa-solid fa-camera-rotate"></i>
+                            </button>
+                        </div>
+
+                        <!-- Right lid state -->
+                        <div id="dryLidStatus" class="glassmorphism px-3 py-2 rounded-xl text-center border-amber-500/10 flex-grow max-w-[150px] transition-all duration-300">
+                            <span class="text-[9px] text-slate-400 block uppercase font-bold tracking-wider">Dry Compartment</span>
+                            <span class="text-[11px] font-orbitron font-semibold text-amber-400" id="dryLidText">LID CLOSED</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- RIGHT PANEL: Diagnostics, Calibration, System Info -->
+            <div class="lg:col-span-3 flex flex-col gap-5 order-3">
+                <!-- DIAGNOSTIC SYSTEM CHECKLIST -->
+                <div class="glassmorphism p-5 rounded-2xl">
+                    <h3 class="font-orbitron text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center">
+                        <i class="fa-solid fa-microchip text-violet-400 mr-2"></i> IoT System Sensors
+                    </h3>
+                    
+                    <div class="flex flex-col gap-3">
+                        <!-- Moisture Sensor -->
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-droplet"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Moisture Analyzer</span>
+                                    <span id="moistureVal" class="text-xs font-semibold text-slate-200">12% (Passive Scan)</span>
+                                </div>
+                            </div>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        </div>
+
+                        <!-- Proximity Lid Laser Sensor -->
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-400 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-radar"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">TOF Laser Sensor</span>
+                                    <span id="proximityVal" class="text-xs font-semibold text-slate-200">Range: 45cm (Static)</span>
+                                </div>
+                            </div>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        </div>
+
+                        <!-- Image Classification AI Model Status -->
+                        <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-2.5 flex items-center justify-between">
+                            <div class="flex items-center space-x-2.5">
+                                <div class="w-8 h-8 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-xs">
+                                    <i class="fa-solid fa-brain"></i>
+                                </div>
+                                <div>
+                                    <span class="text-[10px] text-slate-400 block uppercase tracking-wider font-semibold">Image Classification</span>
+                                    <span id="classificationVal" class="text-xs font-semibold text-slate-200">Ready / Standby</span>
+                                </div>
+                            </div>
+                            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                        </div>
+                    </div>
+
+                    <!-- AI Confidence Indicator Bar -->
+                    <div class="mt-4 pt-3 border-t border-slate-800/80">
+                        <div class="flex justify-between items-center text-[10px] mb-1">
+                            <span class="text-slate-400 uppercase font-semibold">AI Confidence Match</span>
+                            <span id="confidencePct" class="font-orbitron text-purple-400 font-bold">0%</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-800/80 rounded-full overflow-hidden">
+                            <div id="confidenceBar" class="h-full bg-gradient-to-r from-purple-500 to-indigo-500 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- HOW IT WORKS COLLAPSIBLE PANEL -->
+                <div class="glassmorphism p-5 rounded-2xl flex-grow flex flex-col justify-between">
+                    <div>
+                        <h3 class="font-orbitron text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center">
+                            <i class="fa-solid fa-graduation-cap text-yellow-400 mr-2"></i> Engineering Architecture
+                        </h3>
+                        <div class="space-y-3.5 text-xs text-slate-300">
+                            <div class="flex gap-2">
+                                <span class="font-orbitron font-extrabold text-blue-400 text-sm">01</span>
+                                <p><strong class="text-white">Optical Sensing:</strong> High-definition micro-camera captures visual frames of the approaching waste item inside the scanner hood.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="font-orbitron font-extrabold text-blue-400 text-sm">02</span>
+                                <p><strong class="text-white">Object Classification:</strong> Real-time edge neural network parses textures, color, and geometry to determine waste category.</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="font-orbitron font-extrabold text-blue-400 text-sm">03</span>
+                                <p><strong class="text-white">Smart Bi-Directional Servo:</strong> Activates a micro-controlled brushless servo mechanism to automatically tilt the sorting lid left (wet) or right (dry).</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Technical Specs Footer Badge -->
+                    <div class="mt-4 pt-4 border-t border-slate-800/80 flex items-center justify-between text-[10px] text-slate-500">
+                        <span>Lid Response: 180ms</span>
+                        <span>Motor Torque: 2.8 Nm</span>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- FOOTER -->
+        <footer class="glassmorphism-header text-center py-4 mt-6 text-xs text-slate-500 flex flex-col md:flex-row items-center justify-between px-6 lg:px-8 gap-3">
+            <p>© 2026 Smart City Technologies Group. Licensed for Engineering prototyping. Crafted with Three.js & GSAP.</p>
+            <div class="flex items-center space-x-4">
+                <a href="#" class="hover:text-blue-400 transition" onclick="toggleGuide()"><i class="fa-solid fa-circle-question mr-1"></i> Interactive Help</a>
+                <span>|</span>
+                <span class="text-blue-500 font-semibold font-orbitron"><i class="fa-solid fa-bolt mr-1"></i> HIGHLY EFFICIENT</span>
+            </div>
+        </footer>
+    </div>
+
+    <!-- AUDIO NOTIFICATION AND HELP GUIDE POPUPS (Custom Modal Modals) -->
+    <div id="welcomeGuideModal" class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md hidden transition-all duration-300 opacity-0">
+        <div class="glassmorphism max-w-md w-full p-6 rounded-3xl border border-slate-800 shadow-2xl relative">
+            <button onclick="toggleGuide()" class="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition">
+                <i class="fa-solid fa-xmark"></i>
+            </button>
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-500/10 text-blue-400 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 border border-blue-500/25">
+                    <i class="fa-solid fa-dumpster-fire"></i>
+                </div>
+                <h3 class="font-orbitron text-xl font-bold text-white tracking-wide">AI Smart Segregation</h3>
+                <p class="text-xs text-blue-400 font-orbitron tracking-widest mt-0.5">PROTOTYPE USER INSTRUCTIONS</p>
+            </div>
+
+            <div class="space-y-3.5 text-xs text-slate-300">
+                <p class="text-slate-400">Welcome to the interactive mock simulation. This physical model utilizes advanced neural intelligence to split items dynamically. Experience it with these simple steps:</p>
+                
+                <div class="flex items-start space-x-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <div class="text-emerald-400 mt-0.5 text-sm"><i class="fa-solid fa-circle-check"></i></div>
+                    <p><strong class="text-white">Drag & Drop Shelf:</strong> Grab any organic (apple, onion, banana) or dry waste (bottle, can, box) item from the left tray and **drop it inside the 3D scene**.</p>
+                </div>
+
+                <div class="flex items-start space-x-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <div class="text-blue-400 mt-0.5 text-sm"><i class="fa-solid fa-circle-check"></i></div>
+                    <p><strong class="text-white">Interact or Click:</strong> If you're on a mobile device or prefer click-mode, you can **click/tap** any item in the tray to automatically process it.</p>
+                </div>
+
+                <div class="flex items-start space-x-3 bg-slate-900/60 p-2.5 rounded-xl border border-slate-800">
+                    <div class="text-purple-400 mt-0.5 text-sm"><i class="fa-solid fa-circle-check"></i></div>
+                    <p><strong class="text-white">Voice Triggers:</strong> Activate voice mode, and say "wet", "onion", "can" or "dry" to instruct sorting instantly.</p>
+                </div>
+            </div>
+
+            <button onclick="toggleGuide()" class="mt-6 w-full py-3 bg-gradient-to-r from-blue-600 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 font-bold rounded-xl transition text-white shadow-lg shadow-blue-500/20 text-xs uppercase tracking-wider font-orbitron">
+                Enter Simulation Lab
+            </button>
+        </div>
+    </div>
+
+    <!-- SCRIPTS & WEB APP LOGIC -->
+    <script>
+        // Global variables for drag operations
+        let draggedType = null;
+        let draggedItemName = null;
+
+        function onDragStart(event, type, itemName) {
+            draggedType = type;
+            draggedItemName = itemName;
+            // Native DnD setup
+            event.dataTransfer.setData("text/plain", type);
+            event.dataTransfer.effectAllowed = "move";
+
+            // Visual feedback on drop destination box
+            const overlay = document.getElementById('dropTargetMarker');
+            const overlayText = document.getElementById('dropTargetText');
+            overlay.classList.remove('border-cyan-400/0');
+            overlay.classList.add('border-cyan-400/60', 'bg-cyan-500/5');
+            overlayText.classList.remove('opacity-0', 'scale-90', 'translate-y-4');
+            overlayText.classList.add('opacity-100', 'scale-100', 'translate-y-0');
+            soundFX.click();
+        }
+
+        // Setup drop listeners on canvas element
+        const dragTarget = document.getElementById('canvas3d');
+
+        dragTarget.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dragTarget.classList.add('drag-hover');
+        });
+
+        dragTarget.addEventListener('dragleave', () => {
+            dragTarget.classList.remove('drag-hover');
+        });
+
+        dragTarget.ondragend = () => {
+            clearDragHighlight();
+        };
+
+        dragTarget.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dragTarget.classList.remove('drag-hover');
+            clearDragHighlight();
+            
+            if (draggedType) {
+                segregateWaste(draggedType, draggedItemName);
+            }
+        });
+
+        function clearDragHighlight() {
+            const overlay = document.getElementById('dropTargetMarker');
+            const overlayText = document.getElementById('dropTargetText');
+            overlay.classList.remove('border-cyan-400/60', 'bg-cyan-500/5');
+            overlay.classList.add('border-cyan-400/0');
+            overlayText.classList.remove('opacity-100', 'scale-100', 'translate-y-0');
+            overlayText.classList.add('opacity-0', 'scale-90', 'translate-y-4');
+        }
+
+        // Audio Synthesizer Engine (Web Audio API)
+        let audioCtx = null;
+        let soundEnabled = true;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSynthBeep(freq, type, duration, volume = 0.1) {
+            if (!soundEnabled) return;
+            initAudio();
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            try {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                
+                osc.type = type; // 'sine', 'square', 'sawtooth', 'triangle'
+                osc.frequency.value = freq;
+                
+                gain.gain.setValueAtTime(volume, audioCtx.currentTime);
+                // Smooth exponential release ramp
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + duration);
+                
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch(e) {
+                console.warn("Sound synth error:", e);
+            }
+        }
+
+        // Custom UI Sound FX
+        const soundFX = {
+            scan: () => {
+                playSynthBeep(440, 'sine', 0.2, 0.08);
+                setTimeout(() => playSynthBeep(880, 'sine', 0.3, 0.06), 100);
+            },
+            openLeft: () => {
+                // Lower slide sound
+                playSynthBeep(260, 'triangle', 0.4, 0.15);
+                setTimeout(() => playSynthBeep(330, 'sine', 0.2, 0.1), 150);
+            },
+            openRight: () => {
+                // Higher slide sound
+                playSynthBeep(330, 'triangle', 0.4, 0.15);
+                setTimeout(() => playSynthBeep(440, 'sine', 0.2, 0.1), 150);
+            },
+            successDrop: () => {
+                playSynthBeep(523.25, 'sine', 0.1, 0.1); // C5
+                setTimeout(() => playSynthBeep(659.25, 'sine', 0.1, 0.1), 80); // E5
+                setTimeout(() => playSynthBeep(783.99, 'sine', 0.2, 0.15), 160); // G5
+            },
+            error: () => {
+                playSynthBeep(220, 'sawtooth', 0.3, 0.12);
+                setTimeout(() => playSynthBeep(180, 'sawtooth', 0.4, 0.15), 150);
+            },
+            click: () => {
+                playSynthBeep(600, 'sine', 0.05, 0.05);
+            }
+        };
+
+        function toggleSound() {
+            soundEnabled = !soundEnabled;
+            const soundIcon = document.getElementById('soundIcon');
+            const soundBtn = document.getElementById('soundBtn');
+            if (soundEnabled) {
+                soundIcon.className = "fa-solid fa-volume-high";
+                soundBtn.classList.remove('opacity-50');
+                initAudio();
+                playSynthBeep(600, 'sine', 0.1, 0.1);
+            } else {
+                soundIcon.className = "fa-solid fa-volume-xmark";
+                soundBtn.classList.add('opacity-50');
+            }
+        }
+
+        // Guide Modal Toggle
+        function toggleGuide() {
+            soundFX.click();
+            const modal = document.getElementById('welcomeGuideModal');
+            if (modal.classList.contains('hidden')) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
+                }, 50);
+            } else {
+                modal.classList.add('opacity-0');
+                setTimeout(() => {
+                    modal.classList.add('hidden');
+                }, 300);
+            }
+        }
+
+        // Show welcome guide by default shortly after landing
+        window.addEventListener('load', () => {
+            setTimeout(() => {
+                toggleGuide();
+            }, 800);
+        });
+
+        // ==========================================
+        // 3D SIMULATION CODE (Three.js & GSAP)
+        // ==========================================
+        
+        let scene, camera, renderer, controls;
+        let dustbinBody, lidLeft, lidRight, glowBar, garbageItem;
+        let wetCounter = 0, dryCounter = 0;
+        let isAnimating = false;
+
+        const container = document.getElementById('canvas3d');
+
+        function init3D() {
+            // Scene Setup
+            scene = new THREE.Scene();
+            scene.fog = new THREE.FogExp2(0x050814, 0.04);
+
+            // Camera Setup
+            camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+            camera.position.set(0, 3.2, 5.5);
+
+            // Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Hide initial loading spinner
+            document.getElementById('canvasSpinner').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('canvasSpinner').style.display = 'none';
+            }, 500);
+
+            // Orbit Controls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.maxPolarAngle = Math.PI / 2 - 0.05; // Prevent camera from going underground
+            controls.minDistance = 2.5;
+            controls.maxDistance = 8.5;
+            controls.target.set(0, 0.8, 0);
+
+            // Ambient Light
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            scene.add(ambientLight);
+
+            // Main Directional Light with Shadows
+            const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            dirLight.position.set(5, 8, 4);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 0.5;
+            dirLight.shadow.camera.far = 15;
+            const d = 4;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            dirLight.shadow.bias = -0.0005;
+            scene.add(dirLight);
+
+            // Cyberpunk Grid Helper & Floor
+            const gridHelper = new THREE.GridHelper(20, 40, 0x1e293b, 0x0f172a);
+            gridHelper.position.y = -0.01;
+            scene.add(gridHelper);
+
+            // Floor Plane
+            const floorGeo = new THREE.PlaneGeometry(30, 30);
+            const floorMat = new THREE.MeshStandardMaterial({
+                color: 0x070b19,
+                roughness: 0.8,
+                metalness: 0.2
+            });
+            const floor = new THREE.Mesh(floorGeo, floorMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Construct Smart Dustbin Model (Procedural)
+            createSmartDustbin();
+
+            // Set up Window Resize handler
+            window.addEventListener('resize', onWindowResize);
+
+            // Animation Loop
+            animate3D();
+        }
+
+        // Creates a highly sleek cybernetic dustbin
+        function createSmartDustbin() {
+            const dustbinGroup = new THREE.Group();
+
+            // 1. Dustbin Outer Cylinder (Semi-octagonal metallic frame for high-tech look)
+            const mainBodyGeo = new THREE.CylinderGeometry(0.7, 0.6, 1.8, 8, 1, false);
+            const mainBodyMat = new THREE.MeshStandardMaterial({
+                color: 0x1e293b,
+                metalness: 0.9,
+                roughness: 0.15,
+                flatShading: true
+            });
+            dustbinBody = new THREE.Mesh(mainBodyGeo, mainBodyMat);
+            dustbinBody.position.y = 0.9;
+            dustbinBody.castShadow = true;
+            dustbinBody.receiveShadow = true;
+            dustbinGroup.add(dustbinBody);
+
+            // 2. High-Tech Inner Rim (Dark metal structure inside)
+            const rimGeo = new THREE.CylinderGeometry(0.72, 0.72, 0.1, 8);
+            const rimMat = new THREE.MeshStandardMaterial({
+                color: 0x0f172a,
+                metalness: 0.8,
+                roughness: 0.4
+            });
+            const rim = new THREE.Mesh(rimGeo, rimMat);
+            rim.position.y = 1.85;
+            dustbinGroup.add(rim);
+
+            // 3. Middle LED Indicator Light Bar (Glow ring around bin body)
+            const glowBarGeo = new THREE.CylinderGeometry(0.71, 0.69, 0.08, 8);
+            // Default glow is subtle cyan/blue
+            const glowBarMat = new THREE.MeshStandardMaterial({
+                color: 0x00d2ff,
+                emissive: 0x00a8e8,
+                emissiveIntensity: 0.5,
+                metalness: 0.5,
+                roughness: 0.2
+            });
+            glowBar = new THREE.Mesh(glowBarGeo, glowBarMat);
+            glowBar.position.y = 1.3;
+            dustbinGroup.add(glowBar);
+
+            // 4. Compartment Dividers (Internal dividing plate visible when lid opens)
+            const dividerGeo = new THREE.BoxGeometry(0.04, 1.6, 1.2);
+            const dividerMat = new THREE.MeshStandardMaterial({ color: 0x0b0f19, roughness: 0.9 });
+            const divider = new THREE.Mesh(dividerGeo, dividerMat);
+            divider.position.set(0, 0.8, 0);
+            dustbinGroup.add(divider);
+
+            // 5. Left Smart Lid Segment (Flips Leftward / rotates to negative X)
+            // Using a Group to set hinge pivot offset easily
+            lidLeft = new THREE.Group();
+            lidLeft.position.set(-0.35, 1.9, 0); // Hinge position on left rim edge
+            
+            const lidLeftHalfGeo = new THREE.BoxGeometry(0.35, 0.06, 1.2);
+            const lidLeftMat = new THREE.MeshStandardMaterial({
+                color: 0x334155,
+                metalness: 0.8,
+                roughness: 0.25
+            });
+            const lidLeftHalf = new THREE.Mesh(lidLeftHalfGeo, lidLeftMat);
+            // Move mesh so physical hinge is on the left edge relative to pivot group
+            lidLeftHalf.position.set(0.175, 0, 0);
+            lidLeftHalf.castShadow = true;
+            lidLeft.add(lidLeftHalf);
+
+            // Accent light on left lid segment (Wet/Emerald Green strip)
+            const leftLidStripGeo = new THREE.BoxGeometry(0.03, 0.08, 1.0);
+            const leftLidStripMat = new THREE.MeshStandardMaterial({
+                color: 0x10b981,
+                emissive: 0x10b981,
+                emissiveIntensity: 0.1
+            });
+            const leftLidStrip = new THREE.Mesh(leftLidStripGeo, leftLidStripMat);
+            leftLidStrip.position.set(0.25, 0.01, 0);
+            lidLeft.add(leftLidStrip);
+
+            dustbinGroup.add(lidLeft);
+
+            // 6. Right Smart Lid Segment (Flips Rightward / rotates to positive X)
+            lidRight = new THREE.Group();
+            lidRight.position.set(0.35, 1.9, 0); // Hinge position on right rim edge
+
+            const lidRightHalfGeo = new THREE.BoxGeometry(0.35, 0.06, 1.2);
+            const lidRightMat = new THREE.MeshStandardMaterial({
+                color: 0x334155,
+                metalness: 0.8,
+                roughness: 0.25
+            });
+            const lidRightHalf = new THREE.Mesh(lidRightHalfGeo, lidRightMat);
+            // Move mesh so physical hinge is on the right edge relative to pivot group
+            lidRightHalf.position.set(-0.175, 0, 0);
+            lidRightHalf.castShadow = true;
+            lidRight.add(lidRightHalf);
+
+            // Accent light on right lid segment (Dry/Amber Yellow strip)
+            const rightLidStripGeo = new THREE.BoxGeometry(0.03, 0.08, 1.0);
+            const rightLidStripMat = new THREE.MeshStandardMaterial({
+                color: 0xf59e0b,
+                emissive: 0xf59e0b,
+                emissiveIntensity: 0.1
+            });
+            const rightLidStrip = new THREE.Mesh(rightLidStripGeo, rightLidStripMat);
+            rightLidStrip.position.set(-0.25, 0.01, 0);
+            lidRight.add(rightLidStrip);
+
+            dustbinGroup.add(lidRight);
+
+            // Add futuristic base support rings
+            const baseGeo = new THREE.CylinderGeometry(0.68, 0.72, 0.12, 8);
+            const baseMat = new THREE.MeshStandardMaterial({ color: 0x0b0f19, metalness: 0.9, roughness: 0.5 });
+            const base = new THREE.Mesh(baseGeo, baseMat);
+            base.position.y = 0.06;
+            base.receiveShadow = true;
+            dustbinGroup.add(base);
+
+            // Add dynamic light beam inside bin (revealed when lids open)
+            const insideLightGeo = new THREE.CylinderGeometry(0.5, 0.5, 1.2, 8);
+            const insideLightMat = new THREE.MeshBasicMaterial({
+                color: 0x00d2ff,
+                transparent: true,
+                opacity: 0.0,
+                side: THREE.DoubleSide
+            });
+            const insideLight = new THREE.Mesh(insideLightGeo, insideLightMat);
+            insideLight.position.y = 1.0;
+            dustbinGroup.add(insideLight);
+
+            scene.add(dustbinGroup);
+        }
+
+        function createGarbageItem(type, itemName) {
+            // Remove previous garbage if exists
+            if (garbageItem) {
+                scene.remove(garbageItem);
+            }
+
+            const itemGroup = new THREE.Group();
+            let geo, mat;
+
+            // Resolve undefined itemNames safely
+            if (!itemName) {
+                itemName = (type === 'wet') ? 'apple' : 'bottle';
+            }
+
+            if (type === 'wet') {
+                if (itemName === 'apple') {
+                    // Apple Core model
+                    geo = new THREE.CylinderGeometry(0.12, 0.08, 0.28, 8);
+                    mat = new THREE.MeshStandardMaterial({ color: 0xe2e8f0, roughness: 0.8 }); // inner flesh
+                    const flesh = new THREE.Mesh(geo, mat);
+                    itemGroup.add(flesh);
+
+                    const skinGeo = new THREE.CylinderGeometry(0.15, 0.12, 0.08, 8);
+                    const skinMat = new THREE.MeshStandardMaterial({ color: 0x10b981, roughness: 0.6 }); // green skin
+                    
+                    const topCap = new THREE.Mesh(skinGeo, skinMat);
+                    topCap.position.y = 0.18;
+                    itemGroup.add(topCap);
+
+                    const botCap = new THREE.Mesh(skinGeo, skinMat);
+                    botCap.position.y = -0.18;
+                    itemGroup.add(botCap);
+
+                    const stemGeo = new THREE.CylinderGeometry(0.015, 0.015, 0.15, 4);
+                    const stemMat = new THREE.MeshStandardMaterial({ color: 0x78350f, roughness: 0.9 });
+                    const stem = new THREE.Mesh(stemGeo, stemMat);
+                    stem.position.y = 0.25;
+                    stem.rotation.z = 0.15;
+                    itemGroup.add(stem);
+
+                } else if (itemName === 'onion') {
+                    // Onion Model: Purplish round bulb with roots/stem
+                    geo = new THREE.SphereGeometry(0.16, 12, 12);
+                    mat = new THREE.MeshStandardMaterial({ color: 0xc084fc, roughness: 0.4, metalness: 0.1 }); // purplish skin
+                    const bulb = new THREE.Mesh(geo, mat);
+                    bulb.scale.set(1.1, 1.3, 1.1);
+                    itemGroup.add(bulb);
+
+                    // Stem sprout on top
+                    const sproutGeo = new THREE.ConeGeometry(0.04, 0.18, 6);
+                    const sproutMat = new THREE.MeshStandardMaterial({ color: 0x4ade80, roughness: 0.7 }); // green sprout
+                    const sprout = new THREE.Mesh(sproutGeo, sproutMat);
+                    sprout.position.y = 0.18;
+                    itemGroup.add(sprout);
+
+                    // Small root cluster on bottom
+                    const rootGeo = new THREE.CylinderGeometry(0.03, 0.06, 0.05, 6);
+                    const rootMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.9 }); // yellowish roots
+                    const root = new THREE.Mesh(rootGeo, rootMat);
+                    root.position.y = -0.18;
+                    itemGroup.add(root);
+
+                } else if (itemName === 'banana') {
+                    // Banana Peel Model: Three-point curved peel
+                    const bananaGroup = new THREE.Group();
+                    const peelGeo = new THREE.CylinderGeometry(0.03, 0.12, 0.35, 5);
+                    const peelMat = new THREE.MeshStandardMaterial({ color: 0xeab308, roughness: 0.5 }); // yellow peel
+                    
+                    const core = new THREE.Mesh(peelGeo, peelMat);
+                    core.rotation.z = 0.2;
+                    bananaGroup.add(core);
+
+                    // Add brown dynamic stem end
+                    const endGeo = new THREE.BoxGeometry(0.04, 0.08, 0.04);
+                    const endMat = new THREE.MeshStandardMaterial({ color: 0x451a03 });
+                    const end = new THREE.Mesh(endGeo, endMat);
+                    end.position.set(0.06, 0.18, 0);
+                    bananaGroup.add(end);
+                    
+                    itemGroup.add(bananaGroup);
+                }
+            } else {
+                if (itemName === 'bottle') {
+                    // Dry plastic bottle
+                    geo = new THREE.CylinderGeometry(0.11, 0.11, 0.38, 8);
+                    mat = new THREE.MeshStandardMaterial({
+                        color: 0x38bdf8,
+                        transparent: true,
+                        opacity: 0.7,
+                        roughness: 0.1,
+                        metalness: 0.9
+                    });
+                    const body = new THREE.Mesh(geo, mat);
+                    itemGroup.add(body);
+
+                    const neckGeo = new THREE.ConeGeometry(0.11, 0.12, 8);
+                    const neck = new THREE.Mesh(neckGeo, mat);
+                    neck.position.y = 0.25;
+                    itemGroup.add(neck);
+
+                    const capGeo = new THREE.CylinderGeometry(0.05, 0.05, 0.06, 6);
+                    const capMat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+                    const cap = new THREE.Mesh(capGeo, capMat);
+                    cap.position.y = 0.33;
+                    itemGroup.add(cap);
+
+                    const wrapGeo = new THREE.CylinderGeometry(0.115, 0.115, 0.1, 8);
+                    const wrapMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 });
+                    const wrap = new THREE.Mesh(wrapGeo, wrapMat);
+                    wrap.position.y = -0.05;
+                    itemGroup.add(wrap);
+
+                } else if (itemName === 'can') {
+                    // Red Soda Can
+                    geo = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 10);
+                    mat = new THREE.MeshStandardMaterial({ color: 0xef4444, metalness: 0.85, roughness: 0.2 }); // metallic red
+                    const canBody = new THREE.Mesh(geo, mat);
+                    itemGroup.add(canBody);
+
+                    // Top and bottom aluminum rims
+                    const rimGeo = new THREE.CylinderGeometry(0.122, 0.122, 0.03, 10);
+                    const rimMat = new THREE.MeshStandardMaterial({ color: 0x94a3b8, metalness: 0.95, roughness: 0.1 });
+                    
+                    const topRim = new THREE.Mesh(rimGeo, rimMat);
+                    topRim.position.y = 0.18;
+                    itemGroup.add(topRim);
+
+                    const botRim = new THREE.Mesh(rimGeo, rimMat);
+                    botRim.position.y = -0.18;
+                    itemGroup.add(botRim);
+
+                } else if (itemName === 'box') {
+                    // Cardboard packaging Box
+                    geo = new THREE.BoxGeometry(0.24, 0.24, 0.24);
+                    mat = new THREE.MeshStandardMaterial({ color: 0xb45309, roughness: 0.9 }); // packaging brown
+                    const box = new THREE.Mesh(geo, mat);
+                    
+                    // Add packing tape detail
+                    const tapeGeo = new THREE.BoxGeometry(0.25, 0.03, 0.05);
+                    const tapeMat = new THREE.MeshStandardMaterial({ color: 0xfef08a, roughness: 0.5 }); // shiny yellowish tape
+                    const tape = new THREE.Mesh(tapeGeo, tapeMat);
+                    tape.position.y = 0.105;
+                    box.add(tape);
+
+                    itemGroup.add(box);
+                }
+            }
+
+            // Enable cast shadow for whole group
+            itemGroup.traverse(child => {
+                if (child.isMesh) child.castShadow = true;
+            });
+
+            // Start High above scanner view
+            itemGroup.position.set(0, 3.4, 0);
+            scene.add(itemGroup);
+            garbageItem = itemGroup;
+        }
+
+        // Resize callback
+        function onWindowResize() {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        }
+
+        // Render & Controls Animation update
+        function animate3D() {
+            requestAnimationFrame(animate3D);
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        // Centers camera smoothly to default viewing angle
+        function reCenterCamera() {
+            soundFX.click();
+            gsap.to(camera.position, { x: 0, y: 3.2, z: 5.5, duration: 1.2, ease: "power2.out" });
+            gsap.to(controls.target, { x: 0, y: 0.8, z: 0, duration: 1.2, ease: "power2.out" });
+        }
+
+
+        // ==========================================
+        // SMART WASTE SEGREGATION SIMULATOR PIPELINE
+        // ==========================================
+
+        function logToTerminal(message) {
+            const terminal = document.getElementById('systemTerminal');
+            const newLine = document.createElement('div');
+            newLine.innerHTML = `&gt;_ ${message}`;
+            terminal.appendChild(newLine);
+            terminal.scrollTop = terminal.scrollHeight;
+        }
+
+        function segregateWaste(type, itemName) {
+            if (isAnimating) {
+                logToTerminal("System Busy! Wait until sorting animation finishes.");
+                soundFX.error();
+                return;
+            }
+
+            isAnimating = true;
+
+            const laserScan = document.getElementById('laserScanContainer');
+            const cameraHud = document.getElementById('camIndicator');
+            const hudClassification = document.getElementById('hudClassification');
+            const moistureVal = document.getElementById('moistureVal');
+            const proximityVal = document.getElementById('proximityVal');
+            const classificationVal = document.getElementById('classificationVal');
+            const confidencePct = document.getElementById('confidencePct');
+            const confidenceBar = document.getElementById('confidenceBar');
+
+            soundFX.scan();
+            logToTerminal(`Target Approaching. Drag-and-drop detected: ${itemName ? itemName.toUpperCase() : type.toUpperCase()}`);
+            
+            // Visual scanning alerts
+            laserScan.style.opacity = '1';
+            cameraHud.classList.remove('border-emerald-500/40', 'bg-emerald-500/10');
+            cameraHud.classList.add('border-cyan-400', 'bg-cyan-500/20');
+            hudClassification.innerText = "CLASSIFYING...";
+            hudClassification.className = "text-[11px] font-orbitron font-bold text-cyan-400 mt-0.5 animate-pulse";
+
+            // Create appropriate falling object mesh
+            createGarbageItem(type, itemName);
+
+            // Animate object into camera scanning region
+            gsap.set(garbageItem.position, { x: 0, y: 3.4, z: 0.3 });
+            gsap.set(garbageItem.rotation, { x: 0, y: 0, z: 0 });
+
+            gsap.timeline()
+                // Drop down to scanner area
+                .to(garbageItem.position, {
+                    y: 2.3,
+                    z: 0,
+                    duration: 0.8,
+                    ease: "bounce.out",
+                    onComplete: () => {
+                        logToTerminal("Capturing frame data. Running neural networks...");
+                    }
+                })
+                // Object rotates slightly in scanner frame
+                .to(garbageItem.rotation, {
+                    y: Math.PI * 2,
+                    duration: 1.2,
+                    ease: "power1.inOut",
+                    onStart: () => {
+                        // Dynamically scale confidence percentages to match simulated computation
+                        gsap.to(confidenceBar, { width: "98.4%", duration: 1.1 });
+                        gsap.to({ val: 0 }, {
+                            val: 98.4,
+                            duration: 1.1,
+                            onUpdate: function() {
+                                confidencePct.innerText = `${this.targets()[0].val.toFixed(1)}%`;
+                            }
+                        });
+                    },
+                    onComplete: () => {
+                        // Scanning Finished - Perform Classification
+                        laserScan.style.opacity = '0';
+                        
+                        if (type === 'wet') {
+                            // WET CLASSIFICATION COMPLETE
+                            hudClassification.innerText = itemName ? `WET: ${itemName.toUpperCase()}` : "WET BIO-WASTE";
+                            hudClassification.className = "text-[11px] font-orbitron font-bold text-emerald-400 mt-0.5 glow-green";
+                            moistureVal.innerText = (itemName === 'apple') ? "87% (Highly Organic)" : (itemName === 'onion') ? "91% (Water Dense)" : "79% (Organic Waste)";
+                            proximityVal.innerText = "Range: 20cm (Close)";
+                            classificationVal.innerText = itemName ? `${itemName.charAt(0).toUpperCase() + itemName.slice(1)} / Organic` : "Organic Waste";
+
+                            cameraHud.className = "w-full h-full bg-emerald-500/20 border border-emerald-400 relative";
+
+                            logToTerminal(`Neural network match: WET WASTE (${itemName || 'organic'}). Wet lid instruction triggered.`);
+                            
+                            // Color glow ring to Green
+                            gsap.to(glowBar.material.color, { r: 0.1, g: 0.72, b: 0.5, duration: 0.3 });
+                            gsap.to(glowBar.material.emissive, { r: 0.1, g: 0.72, b: 0.5, duration: 0.3 });
+                            glowBar.material.emissiveIntensity = 1.2;
+
+                            // Open Left Lid (Wet Lid Opens to the Left -> Z-rotation decreases to open outwards)
+                            soundFX.openLeft();
+                            document.getElementById('wetLidStatus').classList.add('bg-emerald-500/10', 'border-emerald-500/50', 'scale-105');
+                            document.getElementById('wetLidText').innerText = "OPEN (LEFT)";
+                            
+                            gsap.to(lidLeft.rotation, {
+                                z: Math.PI / 2.2, // ~80 degrees outward
+                                duration: 0.6,
+                                ease: "back.out(1.5)",
+                                onComplete: () => {
+                                    // Drop item into left compartment
+                                    logToTerminal("Lid response complete. Dropping to Left compartment.");
+                                    gsap.to(garbageItem.position, {
+                                        x: -0.3,
+                                        y: 0.5,
+                                        z: -0.1,
+                                        duration: 0.6,
+                                        ease: "power2.in",
+                                        onStart: () => {
+                                            gsap.to(garbageItem.scale, { x: 0.1, y: 0.1, z: 0.1, duration: 0.6 });
+                                        },
+                                        onComplete: () => {
+                                            soundFX.successDrop();
+                                            logToTerminal("Waste dropped. Closing lid.");
+                                            
+                                            // Animate lid closed
+                                            gsap.to(lidLeft.rotation, {
+                                                z: 0,
+                                                duration: 0.5,
+                                                ease: "power2.inOut",
+                                                onComplete: () => {
+                                                    resetDustbinState();
+                                                    updateCounters('wet');
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+
+                        } else {
+                            // DRY CLASSIFICATION COMPLETE
+                            hudClassification.innerText = itemName ? `DRY: ${itemName.toUpperCase()}` : "DRY RECYCLABLE";
+                            hudClassification.className = "text-[11px] font-orbitron font-bold text-amber-400 mt-0.5 glow-yellow";
+                            moistureVal.innerText = (itemName === 'bottle') ? "4% (Dehydrated)" : (itemName === 'can') ? "1% (Metallic Core)" : "5% (Paper Board)";
+                            proximityVal.innerText = "Range: 20cm (Close)";
+                            classificationVal.innerText = itemName ? `${itemName.charAt(0).toUpperCase() + itemName.slice(1)} / Material` : "Recyclable Dry";
+
+                            cameraHud.className = "w-full h-full bg-amber-500/20 border border-amber-400 relative";
+
+                            logToTerminal(`Neural network match: DRY RECYCLABLE (${itemName || 'non-organic'}). Dry lid instruction triggered.`);
+
+                            // Color glow ring to Amber
+                            gsap.to(glowBar.material.color, { r: 0.96, g: 0.62, b: 0.04, duration: 0.3 });
+                            gsap.to(glowBar.material.emissive, { r: 0.96, g: 0.62, b: 0.04, duration: 0.3 });
+                            glowBar.material.emissiveIntensity = 1.2;
+
+                            // Open Right Lid (Dry Lid Opens to the Right -> Z-rotation increases to open outwards)
+                            soundFX.openRight();
+                            document.getElementById('dryLidStatus').classList.add('bg-amber-500/10', 'border-amber-500/50', 'scale-105');
+                            document.getElementById('dryLidText').innerText = "OPEN (RIGHT)";
+
+                            gsap.to(lidRight.rotation, {
+                                z: -Math.PI / 2.2, // ~-80 degrees outward
+                                duration: 0.6,
+                                ease: "back.out(1.5)",
+                                onComplete: () => {
+                                    // Drop item into right compartment
+                                    logToTerminal("Lid response complete. Dropping to Right compartment.");
+                                    gsap.to(garbageItem.position, {
+                                        x: 0.3,
+                                        y: 0.5,
+                                        z: -0.1,
+                                        duration: 0.6,
+                                        ease: "power2.in",
+                                        onStart: () => {
+                                            gsap.to(garbageItem.scale, { x: 0.1, y: 0.1, z: 0.1, duration: 0.6 });
+                                        },
+                                        onComplete: () => {
+                                            soundFX.successDrop();
+                                            logToTerminal("Waste dropped. Closing lid.");
+
+                                            // Animate lid closed
+                                            gsap.to(lidRight.rotation, {
+                                                z: 0,
+                                                duration: 0.5,
+                                                ease: "power2.inOut",
+                                                onComplete: () => {
+                                                    resetDustbinState();
+                                                    updateCounters('dry');
+                                                }
+                                            });
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                    }
+                });
+        }
+
+        // Restores physical indicators back to standby modes
+        function resetDustbinState() {
+            const cameraHud = document.getElementById('camIndicator');
+            const hudClassification = document.getElementById('hudClassification');
+            const confidenceBar = document.getElementById('confidenceBar');
+            const confidencePct = document.getElementById('confidencePct');
+
+            // Reset camera HUD indicators
+            cameraHud.className = "w-full h-full bg-emerald-500/10 border border-emerald-500/40 relative";
+            hudClassification.innerText = "READY FOR INPUT";
+            hudClassification.className = "text-[11px] font-orbitron font-bold text-cyan-400 mt-0.5";
+
+            // Reset glow ring back to standard blue
+            gsap.to(glowBar.material.color, { r: 0.0, g: 0.82, b: 1.0, duration: 0.5 });
+            gsap.to(glowBar.material.emissive, { r: 0.0, g: 0.66, b: 0.91, duration: 0.5 });
+            glowBar.material.emissiveIntensity = 0.5;
+
+            // Reset HUD state labels and classes
+            document.getElementById('wetLidStatus').className = "glassmorphism px-3 py-2 rounded-xl text-center border-emerald-500/10 flex-grow max-w-[150px] transition-all duration-300";
+            document.getElementById('wetLidText').innerText = "LID CLOSED";
+
+            document.getElementById('dryLidStatus').className = "glassmorphism px-3 py-2 rounded-xl text-center border-amber-500/10 flex-grow max-w-[150px] transition-all duration-300";
+            document.getElementById('dryLidText').innerText = "LID CLOSED";
+
+            // Remove 3D simulated mesh garbage
+            if (garbageItem) {
+                scene.remove(garbageItem);
+                garbageItem = null;
+            }
+
+            // Slide confidence down
+            gsap.to(confidenceBar, { width: "0%", duration: 0.4 });
+            confidencePct.innerText = "0%";
+
+            isAnimating = false;
+        }
+
+        // Dashboard Incrementor and Progression Fill
+        function updateCounters(binType) {
+            if (binType === 'wet') {
+                wetCounter++;
+                document.getElementById('wetCount').innerText = wetCounter;
+                logToTerminal(`System logs: Succesfully logged 1 unit of WET organic bio-mass. Total: ${wetCounter}`);
+            } else if (binType === 'dry') {
+                dryCounter++;
+                document.getElementById('dryCount').innerText = dryCounter;
+                logToTerminal(`System logs: Succesfully logged 1 unit of DRY recyclable. Total: ${dryCounter}`);
+            }
+
+            // Calculate fill percentage (simulating total capacity of 15 items combined)
+            const maxCapacity = 15;
+            const currentTotal = wetCounter + dryCounter;
+            const fillPercent = Math.min(Math.round((currentTotal / maxCapacity) * 100), 100);
+
+            document.getElementById('fillPercent').innerText = `${fillPercent}%`;
+            document.getElementById('fillBar').style.width = `${fillPercent}%`;
+
+            if (fillPercent >= 100) {
+                logToTerminal("🚨 WARNING: SEGREGATOR UNIT CAPACITY EXCEEDED. Please empty collection containers.");
+                soundFX.error();
+            }
+        }
+
+        // Reset All Analytics Counters
+        function resetSimulation() {
+            soundFX.click();
+            wetCounter = 0;
+            dryCounter = 0;
+            document.getElementById('wetCount').innerText = '0';
+            document.getElementById('dryCount').innerText = '0';
+            document.getElementById('fillPercent').innerText = '0%';
+            document.getElementById('fillBar').style.width = '0%';
+            
+            document.getElementById('moistureVal').innerText = "12% (Passive Scan)";
+            document.getElementById('proximityVal').innerText = "Range: 45cm (Static)";
+            document.getElementById('classificationVal').innerText = "Ready / Standby";
+
+            logToTerminal("System Reset Complete. Zeroed analytics storage buffers.");
+            resetDustbinState();
+        }
+
+        // Diagnostic Self-Test sequence
+        function testSystemDiagnostics() {
+            soundFX.scan();
+            logToTerminal("🧪 Initiating Full System self-diagnostics check...");
+            
+            setTimeout(() => {
+                playSynthBeep(600, 'sine', 0.1, 0.1);
+                logToTerminal("✓ Hinge Brushless Servos: Fully calibrated and active.");
+            }, 500);
+
+            setTimeout(() => {
+                playSynthBeep(600, 'sine', 0.1, 0.1);
+                logToTerminal("✓ Neural Model Inference Engine loaded in 24ms.");
+            }, 900);
+
+            setTimeout(() => {
+                playSynthBeep(700, 'sine', 0.15, 0.1);
+                logToTerminal("✓ Telemetry connection active. Cloud dashboard in sync.");
+            }, 1300);
+        }
+
+        // ==========================================
+        // BONUS: VOICE COMMAND SPEECH IMPLEMENTATION
+        // ==========================================
+        
+        let voiceActive = false;
+        let recognition = null;
+
+        function toggleVoiceControl() {
+            soundFX.click();
+            const voiceBtn = document.getElementById('voiceBtn');
+            const micIcon = document.getElementById('micIcon');
+            const micPulse = document.getElementById('micPulse');
+            const micStatus = document.getElementById('micStatus');
+
+            if (!voiceActive) {
+                // Initialize Web Speech API
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                
+                if (!SpeechRecognition) {
+                    logToTerminal("Your browser does not support voice recognition. Try Google Chrome.");
+                    soundFX.error();
+                    return;
+                }
+
+                recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.lang = 'en-US';
+                recognition.interimResults = false;
+                recognition.maxAlternatives = 1;
+
+                recognition.onstart = () => {
+                    voiceActive = true;
+                    voiceBtn.innerText = "Stop Voice Assistant";
+                    voiceBtn.classList.replace('bg-blue-600', 'bg-red-600');
+                    voiceBtn.classList.add('hover:bg-red-500');
+                    micIcon.className = "fa-solid fa-microphone text-red-400";
+                    micPulse.classList.remove('hidden');
+                    micStatus.innerText = "Listening";
+                    micStatus.className = "text-[9px] text-red-500 uppercase tracking-wider font-semibold font-orbitron animate-pulse";
+                    
+                    logToTerminal("Speech recognizer online! Speak 'wet', 'onion', 'can' or 'dry' to classify.");
+                    playSynthBeep(500, 'triangle', 0.1, 0.1);
+                };
+
+                recognition.onresult = (event) => {
+                    const resultText = event.results[event.results.length - 1][0].transcript.trim().toLowerCase();
+                    logToTerminal(`Voice Recognized phrase: "${resultText}"`);
+
+                    if (resultText.includes("apple")) {
+                        segregateWaste('wet', 'apple');
+                    } else if (resultText.includes("onion")) {
+                        segregateWaste('wet', 'onion');
+                    } else if (resultText.includes("banana")) {
+                        segregateWaste('wet', 'banana');
+                    } else if (resultText.includes("bottle")) {
+                        segregateWaste('dry', 'bottle');
+                    } else if (resultText.includes("can")) {
+                        segregateWaste('dry', 'can');
+                    } else if (resultText.includes("box") || resultText.includes("cardboard")) {
+                        segregateWaste('dry', 'box');
+                    } else if (resultText.includes("wet") || resultText.includes("organic") || resultText.includes("food")) {
+                        segregateWaste('wet');
+                    } else if (resultText.includes("dry") || resultText.includes("plastic") || resultText.includes("paper")) {
+                        segregateWaste('dry');
+                    } else {
+                        logToTerminal(`Command unmapped. Speak 'wet', 'dry', 'apple', 'onion' or 'can'.`);
+                    }
+                };
+
+                recognition.onerror = (e) => {
+                    console.error("Speech Recognition Error:", e);
+                    logToTerminal(`Voice Engine Error: ${e.error}. Attempting restart.`);
+                };
+
+                recognition.onend = () => {
+                    if (voiceActive) {
+                        recognition.start(); // Keep listening automatically if active
+                    }
+                };
+
+                recognition.start();
+
+            } else {
+                // Shut down voice recognition
+                voiceActive = false;
+                if (recognition) {
+                    recognition.stop();
+                    recognition = null;
+                }
+                
+                voiceBtn.innerText = "Initialize Voice Listening";
+                voiceBtn.classList.replace('bg-red-600', 'bg-blue-600');
+                voiceBtn.classList.remove('hover:bg-red-500');
+                micIcon.className = "fa-solid fa-microphone text-blue-400";
+                micPulse.classList.add('hidden');
+                micStatus.innerText = "Off";
+                micStatus.className = "text-[9px] text-slate-500 uppercase tracking-wider font-semibold font-orbitron";
+                
+                logToTerminal("Voice Segregater interface paused.");
+                playSynthBeep(300, 'sine', 0.15, 0.1);
+            }
+        }
+
+        // Fire on dom loading complete
+        window.onload = function() {
+            init3D();
+        };
+    </script>
+</body>
+</html>
